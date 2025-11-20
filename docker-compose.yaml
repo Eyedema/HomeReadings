@@ -1,0 +1,46 @@
+services:
+  web:
+    build: .
+    container_name: csv-importer
+    depends_on:
+      - timescaledb
+    environment:
+      - DB_ENGINE=timescale
+      - DB_NAME=monitor
+      - DB_USER=monitor
+      - DB_PASSWORD=monitor
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+    ports:
+      - "8000:8000"
+    volumes:
+      - web-data:/app
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    depends_on:
+      - timescaledb
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: timescaledb
+    environment:
+      - POSTGRES_DB=monitor
+      - POSTGRES_USER=monitor
+      - POSTGRES_PASSWORD=monitor
+    ports:
+      - "5432:5432"
+    volumes:
+      - ts-data:/var/lib/postgresql/data
+
+volumes:
+  web-data:
+  grafana-data:
+  ts-data:

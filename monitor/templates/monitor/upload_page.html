@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV Importer</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 520px;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+    #drop-area {
+      border: 2px dashed #9ca3af;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      color: #6b7280;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+      margin-top: 1rem;
+    }
+    #drop-area.highlight {
+      border-color: #2563eb;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    #file-input {
+      display: none;
+    }
+    .actions {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    button {
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    #upload-btn {
+      background: #2563eb;
+      color: white;
+    }
+    #upload-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    #reset-btn {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .progress-container {
+      margin-top: 1rem;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      height: 10px;
+      display: none;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(to right, #2563eb, #22c55e);
+      transition: width 0.1s linear;
+    }
+    .status {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .status.ok {
+      color: #16a34a;
+    }
+    .status.err {
+      color: #dc2626;
+    }
+    .details {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      max-height: 160px;
+      overflow: auto;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      display: none;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Upload CSV</h1>
+    <p>Select or drop a CSV file to import temperature readings.</p>
+
+    <div id="drop-area">
+      <p id="drop-label">Drop CSV here or click to choose</p>
+    </div>
+    <input id="file-input" type="file" accept=".csv" />
+
+    <div class="actions">
+      <button id="reset-btn" type="button">Clear</button>
+      <button id="upload-btn" type="button" disabled>Upload</button>
+    </div>
+
+    <div class="progress-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="details" id="details"></div>
+</div>  
+  <script>
+    const dropArea = document.getElementById('drop-area');
+    const dropLabel = document.getElementById('drop-label');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const statusEl = document.getElementById('status');
+    const detailsEl = document.getElementById('details');
+
+    let currentFile = null;
+
+    function resetUI() {
+      currentFile = null;
+      dropLabel.textContent = 'Drop CSV here or click to choose';
+      uploadBtn.disabled = true;
+      progressContainer.style.display = 'none';
+      progressBar.style.width = '0%';
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+      detailsEl.textContent = '';
+      detailsEl.style.display = 'none';
+      fileInput.value = '';
+    }
+
+    resetBtn.addEventListener('click', resetUI);
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, () => dropArea.classList.add('highlight'));
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, () => dropArea.classList.remove('highlight'));
+    });
+
+    dropArea.addEventListener('click', () => fileInput.click());
+
+    dropArea.addEventListener('drop', e => {
+      const files = e.dataTransfer.files;
+      if (!files || !files.length) return;
+      currentFile = files[0];
+      dropLabel.textContent = `Selected: ${currentFile.name}`;
+      uploadBtn.disabled = false;
+      statusEl.textContent = '';
+      detailsEl.textContent = '';
+      detailsEl.style.display = 'none';
+    });
+
+    fileInput.addEventListener('change', e => {
+      const files = e.target.files;
+      if (!files || !files.length) return;
+      currentFile = files[0];
+      dropLabel.textContent = `Selected: ${currentFile.name}`;
+      uploadBtn.disabled = false;
+      statusEl.textContent = '';
+      detailsEl.textContent = '';
+      detailsEl.style.display = 'none';
+    });
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    uploadBtn.addEventListener('click', () => {
+      if (!currentFile) return;
+
+      const formData = new FormData();
+      formData.append('file', currentFile);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload-csv/', true);
+
+      const csrftoken = getCookie('csrftoken');
+      if (csrftoken) {
+        xhr.setRequestHeader('X-CSRFToken', csrftoken);
+      }
+
+      progressContainer.style.display = 'block';
+      progressBar.style.width = '0%';
+      statusEl.textContent = 'Uploading...';
+      statusEl.className = 'status';
+      uploadBtn.disabled = true;
+
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = percent + '%';
+        }
+      });
+
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState !== XMLHttpRequest.DONE) return;
+
+        uploadBtn.disabled = false;
+
+        try {
+          const data = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+          if (xhr.status >= 200 && xhr.status < 300) {
+            statusEl.textContent = data.inserted
+              ? `Imported ${data.inserted} rows successfully.`
+              : 'Upload completed.';
+            statusEl.className = 'status ok';
+
+            if (data.errors && data.errors.length) {
+              detailsEl.style.display = 'block';
+              detailsEl.textContent = 'Some rows failed:\\n' +
+                data.errors
+                  .slice(0, 20)
+                  .map(err => `Row ${err.row}: ${JSON.stringify(err.errors)}`)
+                  .join('\\n');
+            }
+          } else {
+            statusEl.textContent = data.detail || 'Upload failed.';
+            statusEl.className = 'status err';
+            if (data.errors) {
+              detailsEl.style.display = 'block';
+              detailsEl.textContent = JSON.stringify(data.errors, null, 2);
+            }
+          }
+        } catch (e) {
+          statusEl.textContent = 'Unexpected response from server.';
+          statusEl.className = 'status err';
+        }
+      };
+
+      xhr.onerror = () => {
+        uploadBtn.disabled = false;
+        statusEl.textContent = 'Network error while uploading.';
+        statusEl.className = 'status err';
+      };
+
+      xhr.send(formData);
+    });
+  </script>
+</body>
+</html>
