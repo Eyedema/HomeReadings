@@ -10,9 +10,9 @@ services:
       - DB_USER=monitor
       - DB_PASSWORD=monitor
       - DB_HOST=timescaledb
-      - DB_PORT=5432
+      - DB_PORT=6397
     ports:
-      - "8000:8000"
+      - "6398:8000"
     volumes:
       - web-data:/app
 
@@ -22,7 +22,7 @@ services:
     depends_on:
       - timescaledb
     ports:
-      - "3000:3000"
+      - "6399:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
@@ -36,7 +36,7 @@ services:
       - POSTGRES_USER=monitor
       - POSTGRES_PASSWORD=monitor
     ports:
-      - "5432:5432"
+      - "6397:5432"
     volumes:
       - ts-data:/var/lib/postgresql/data
 
