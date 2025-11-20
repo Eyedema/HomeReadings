@@ -10,7 +10,7 @@ services:
       - DB_USER=monitor
       - DB_PASSWORD=monitor
       - DB_HOST=timescaledb
-      - DB_PORT=6397
+      - DB_PORT=5432
     ports:
       - "6398:8000"
     volumes:
